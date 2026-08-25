@@ -1,0 +1,53 @@
+name: Deploy Eureka Server
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+
+      - name: Build application
+        run: ./mvnw clean package -DskipTests
+
+      - name: Copy JAR to VM
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USERNAME }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          port: ${{ secrets.VM_PORT }}
+          source: "target/eureka_service-0.0.1-SNAPSHOT.jar"
+          target: "/home/dinuka0512/kade_be/kade_eureka_server/target"
+
+      - name: Restart Eureka Server
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USERNAME }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          port: ${{ secrets.VM_PORT }}
+          script: |
+            pkill -f 'eureka_service-0.0.1-SNAPSHOT.jar' || true
+
+            cd /home/dinuka0512/kade_be/kade_eureka_server
+
+            nohup java -jar target/eureka_service-0.0.1-SNAPSHOT.jar > eureka.log 2>&1 &
+
+            sleep 10
+
+            curl -f http://localhost:8761 > /dev/null
+
+            echo "Eureka Server deployed successfully!"
