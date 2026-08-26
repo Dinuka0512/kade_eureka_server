@@ -42,17 +42,19 @@ jobs:
           script: |
             cd /home/dinuka0512/kade_be/kade_eureka_server
 
-            PID=$(pgrep -f 'java.*eureka_service-0.0.1-SNAPSHOT.jar' || true)
+            echo "Stopping old Eureka Server..."
 
-            if [ -n "$PID" ]; then
-              echo "Stopping Eureka Server PID: $PID"
-              kill $PID
+            OLD_PID=$(sudo ss -lntp | grep ':8761' | grep -o 'pid=[0-9]*' | cut -d= -f2 || true)
+
+            if [ -n "$OLD_PID" ]; then
+              echo "Found Eureka PID: $OLD_PID"
+              sudo kill $OLD_PID || true
               sleep 5
             fi
 
-            echo "Starting Eureka Server..."
+            echo "Starting new Eureka Server..."
 
-            nohup java -jar target/eureka_service-0.0.1-SNAPSHOT.jar > eureka.log 2>&1 &
+            nohup java -jar target/eureka_service-0.0.1-SNAPSHOT.jar > eureka.log 2>&1 < /dev/null &
 
             sleep 15
 
